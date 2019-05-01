@@ -60,6 +60,10 @@ fasttext_src_cc = list(
     map(lambda x: str(os.path.join(FASTTEXT_SRC, x)), fasttext_src_cc)
 )
 
+extra_compile_args = " -march=native -ffast-math -Wsuggest-final-methods" \
+                     " -Walloc-zero -Wsuggest-override -Wodr -flto -ftree-loop-linear" \
+                     " -floop-strip-mine -floop-block "
+
 ext_modules = [
     Extension(
         str('fasttext_pybind'),
@@ -74,8 +78,8 @@ ext_modules = [
             FASTTEXT_SRC,
         ],
         language='c++',
-        extra_compile_args=["-O0 -fno-inline -fprofile-arcs -pthread -march=native" if coverage else
-                            "-O3 -funroll-loops -pthread -march=native"],
+        extra_compile_args=[("-O0 -fno-inline -fprofile-arcs -pthread -march=native" if coverage else
+                            "-O3 -funroll-loops -pthread -march=native") + extra_compile_args],
     ),
 ]
 
@@ -100,6 +104,7 @@ def cpp_flag(compiler):
     """Return the -std=c++[0x/11/14] compiler flag.
     The c++14 is preferred over c++0x/11 (when it is available).
     """
+    return '-std=c++14'
     standards = ['-std=c++14', '-std=c++11', '-std=c++0x']
     for standard in standards:
         if has_flag(compiler, [standard]):
@@ -134,6 +139,11 @@ class BuildExt(build_ext):
         ct = self.compiler.compiler_type
         opts = self.c_opts.get(ct, [])
         extra_link_args = []
+        self.c_opts['unix'] += [
+            "-flto", "-march=native", "-ffast-math", "-Wsuggest-final-methods",
+            "-Walloc-zero", "-Wsuggest-override", "-Wodr", "-ftree-loop-linear",
+            "-floop-strip-mine", "-floop-block",
+        ]
 
         if coverage:
             coverage_option = '--coverage'
@@ -190,7 +200,7 @@ setup(
         'Operating System :: Unix',
         'Operating System :: MacOS',
     ],
-    install_requires=['pybind11>=2.2', "setuptools >= 0.7.0", "numpy"],
+    install_requires=[],
     cmdclass={'build_ext': BuildExt},
     packages=[
         str('fastText'),

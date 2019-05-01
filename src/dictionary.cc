@@ -489,6 +489,8 @@ void Dictionary::init() {
 
 void Dictionary::prune(std::vector<int32_t>& idx) {
   std::vector<int32_t> words, ngrams;
+  words.reserve(idx.size());
+  ngrams.reserve(idx.size());
   for (auto it = idx.cbegin(); it != idx.cend(); ++it) {
     if (*it < nwords_) {
       words.push_back(*it);

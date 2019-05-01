@@ -73,7 +73,7 @@ class BinaryLogisticLoss : public Loss {
 class OneVsAllLoss : public BinaryLogisticLoss {
  public:
   explicit OneVsAllLoss(std::shared_ptr<Matrix>& wo);
-  ~OneVsAllLoss() noexcept override = default;
+  ~OneVsAllLoss() noexcept override final = default;
   real forward(
       const std::vector<int32_t>& targets,
       int32_t targetIndex,
@@ -96,14 +96,14 @@ class NegativeSamplingLoss : public BinaryLogisticLoss {
       std::shared_ptr<Matrix>& wo,
       int neg,
       const std::vector<int64_t>& targetCounts);
-  ~NegativeSamplingLoss() noexcept override = default;
+  ~NegativeSamplingLoss() noexcept override final = default;
 
   real forward(
       const std::vector<int32_t>& targets,
       int32_t targetIndex,
       Model::State& state,
       real lr,
-      bool backprop) override;
+      bool backprop) override final;
 };
 
 class HierarchicalSoftmaxLoss : public BinaryLogisticLoss {
@@ -133,31 +133,31 @@ class HierarchicalSoftmaxLoss : public BinaryLogisticLoss {
   explicit HierarchicalSoftmaxLoss(
       std::shared_ptr<Matrix>& wo,
       const std::vector<int64_t>& counts);
-  ~HierarchicalSoftmaxLoss() noexcept override = default;
+  ~HierarchicalSoftmaxLoss() noexcept override final = default;
   real forward(
       const std::vector<int32_t>& targets,
       int32_t targetIndex,
       Model::State& state,
       real lr,
-      bool backprop) override;
+      bool backprop) override final;
   void predict(
       int32_t k,
       real threshold,
       Predictions& heap,
-      Model::State& state) const override;
+      Model::State& state) const override final;
 };
 
 class SoftmaxLoss : public Loss {
  public:
   explicit SoftmaxLoss(std::shared_ptr<Matrix>& wo);
-  ~SoftmaxLoss() noexcept override = default;
+  ~SoftmaxLoss() noexcept override final = default;
   real forward(
       const std::vector<int32_t>& targets,
       int32_t targetIndex,
       Model::State& state,
       real lr,
       bool backprop) override;
-  void computeOutput(Model::State& state) const override;
+  void computeOutput(Model::State& state) const override final;
 };
 
 } // namespace fasttext
