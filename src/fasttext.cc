@@ -579,19 +579,21 @@ std::vector<std::pair<real, std::string>> FastText::getNN(
     queryNorm = 1;
   }
 
-  int32_t i;
-  for (i = 0; i < dict_->nwords() && heap.size() < k; ++i) {
+  int32_t i = 0;
+  while (i < dict_->nwords() && heap.size() < k) {
     std::string word = dict_->getWord(i);
     if (banSet.find(word) == banSet.end()) {
       real dp = wordVectors.dotRow(query, i);
       real similarity = dp / queryNorm;
       heap.emplace_back(similarity, std::move(word));
     }
+    ++i;
   }
+
   greater_first<typename decltype(heap)::value_type> cmp;
   std::make_heap(std::begin(heap), std::end(heap), cmp);
 
-  for (; i < dict_->nwords(); ++i) {
+  while (i < dict_->nwords()) {
     std::string word = dict_->getWord(i);
     if (banSet.find(word) == banSet.end()) {
       real dp = wordVectors.dotRow(query, i);
@@ -604,6 +606,7 @@ std::vector<std::pair<real, std::string>> FastText::getNN(
           heap.pop_back();
       }
     }
+    ++i;
   }
 
   std::sort(heap.begin(), heap.end(), cmp); // faster than std::sort_heap
