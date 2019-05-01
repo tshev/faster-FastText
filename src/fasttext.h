@@ -188,4 +188,11 @@ class FastText {
       const std::set<std::string>& banSet,
       std::vector<std::pair<real, std::string>>& results);
 };
+
+template<typename T>
+struct greater_first {
+    bool operator()(const T& x, const T& y) {
+        return y.first < x.first;
+    }
+};
 } // namespace fasttext

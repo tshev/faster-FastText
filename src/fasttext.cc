@@ -572,30 +572,41 @@ std::vector<std::pair<real, std::string>> FastText::getNN(
     int32_t k,
     const std::set<std::string>& banSet) {
   std::vector<std::pair<real, std::string>> heap;
+  heap.reserve(size_t(k + 1));
 
   real queryNorm = query.norm();
   if (std::abs(queryNorm) < 1e-8) {
     queryNorm = 1;
   }
 
-  for (int32_t i = 0; i < dict_->nwords(); i++) {
+  int32_t i;
+  for (i = 0; i < dict_->nwords() && heap.size() < k; ++i) {
+    std::string word = dict_->getWord(i);
+    if (banSet.find(word) == banSet.end()) {
+      real dp = wordVectors.dotRow(query, i);
+      real similarity = dp / queryNorm;
+      heap.emplace_back(similarity, std::move(word));
+    }
+  }
+  greater_first<typename decltype(heap)::value_type> cmp;
+  std::make_heap(std::begin(heap), std::end(heap), cmp);
+
+  for (; i < dict_->nwords(); ++i) {
     std::string word = dict_->getWord(i);
     if (banSet.find(word) == banSet.end()) {
       real dp = wordVectors.dotRow(query, i);
       real similarity = dp / queryNorm;
 
-      if (heap.size() == k && similarity < heap.front().first) {
-        continue;
-      }
-      heap.emplace_back(similarity, word);
-      std::push_heap(heap.begin(), heap.end(), comparePairs);
-      if (heap.size() > k) {
-        std::pop_heap(heap.begin(), heap.end(), comparePairs);
-        heap.pop_back();
+      if (similarity >= heap.front().first) {
+          heap.emplace_back(similarity, std::move(word));
+          std::push_heap(heap.begin(), heap.end(), cmp);
+          std::pop_heap(heap.begin(), heap.end(), cmp);
+          heap.pop_back();
       }
     }
   }
-  std::sort_heap(heap.begin(), heap.end(), comparePairs);
+
+  std::sort(heap.begin(), heap.end(), cmp); // faster than std::sort_heap
 
   return heap;
 }
