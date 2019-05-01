@@ -142,7 +142,7 @@ class BuildExt(build_ext):
         self.c_opts['unix'] += [
             "-flto", "-march=native", "-ffast-math", "-Wsuggest-final-methods",
             "-Walloc-zero", "-Wsuggest-override", "-Wodr", "-ftree-loop-linear",
-            "-floop-strip-mine", "-floop-block",
+            "-floop-strip-mine", "-floop-block", "-O3",
         ]
 
         if coverage:
