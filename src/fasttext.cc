@@ -472,6 +472,7 @@ bool FastText::predictLine(
 }
 
 void FastText::getSentenceVector(std::istream& in, fasttext::Vector& svec) {
+  // std::istream is slow
   svec.zero();
   if (args_->model == model_name::sup) {
     std::vector<int32_t> line, labels;
