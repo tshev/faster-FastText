@@ -89,9 +89,10 @@ int32_t FastText::getSubwordId(const std::string& subword) const {
 void FastText::getWordVector(Vector& vec, const std::string& word) const {
   const std::vector<int32_t>& ngrams = dict_->getSubwords(word);
   vec.zero();
-  for (int i = 0; i < ngrams.size(); i++) {
-    addInputVector(vec, ngrams[i]);
+  for (int32_t ngram : ngrams) {
+    addInputVector(vec, ngram);
   }
+
   if (ngrams.size() > 0) {
     vec.mul(1.0 / ngrams.size());
   }
@@ -121,7 +122,6 @@ void FastText::saveVectors(const std::string& filename) {
     getWordVector(vec, word);
     ofs << word << " " << vec << std::endl;
   }
-  ofs.close();
 }
 
 void FastText::saveVectors() {

@@ -161,23 +161,27 @@ std::string Dictionary::getWord(int32_t id) const {
 // using signed char, we fixed the hash function to make models
 // compatible whatever compiler is used.
 uint32_t Dictionary::hash(const std::string& str) const {
-  uint32_t h = 2166136261;
-  for (size_t i = 0; i < str.size(); i++) {
-    h = h ^ uint32_t(int8_t(str[i]));
-    h = h * 16777619;
+  uint32_t h = 2166136261u;
+  for (auto x : str) {
+    h = h ^ uint32_t(int8_t(x)); // TODO: oops
+    h = h * 16777619u;
   }
   return h;
 }
+
 
 void Dictionary::computeSubwords(
     const std::string& word,
     std::vector<int32_t>& ngrams,
     std::vector<std::string>* substrings) const {
+
+  ngrams.reserve(3ul * word.size());
   for (size_t i = 0; i < word.size(); i++) {
     std::string ngram;
     if ((word[i] & 0xC0) == 0x80) {
       continue;
     }
+
     for (size_t j = i, n = 1; j < word.size() && n <= args_->maxn; n++) {
       ngram.push_back(word[j++]);
       while (j < word.size() && (word[j] & 0xC0) == 0x80) {
@@ -301,11 +305,13 @@ void Dictionary::initTableDiscard() {
 
 std::vector<int64_t> Dictionary::getCounts(entry_type type) const {
   std::vector<int64_t> counts;
-  for (auto& w : words_) {
+  // counts.reserve(words_.size());
+  for (const auto& w : words_) {
     if (w.type == type) {
       counts.push_back(w.count);
     }
   }
+  // counts.shrink_to_fit();
   return counts;
 }
 
@@ -491,11 +497,11 @@ void Dictionary::prune(std::vector<int32_t>& idx) {
   std::vector<int32_t> words, ngrams;
   words.reserve(idx.size());
   ngrams.reserve(idx.size());
-  for (auto it = idx.cbegin(); it != idx.cend(); ++it) {
-    if (*it < nwords_) {
-      words.push_back(*it);
+  for (int32_t x : idx) {
+    if (x < nwords_) {
+      words.push_back(x);
     } else {
-      ngrams.push_back(*it);
+      ngrams.push_back(x);
     }
   }
   std::sort(words.begin(), words.end());
@@ -530,12 +536,12 @@ void Dictionary::prune(std::vector<int32_t>& idx) {
 
 void Dictionary::dump(std::ostream& out) const {
   out << words_.size() << std::endl;
-  for (auto it : words_) {
-    std::string entryType = "word";
+  for (const auto& it : words_) {
     if (it.type == entry_type::label) {
-      entryType = "label";
+        out << it.word << " " << it.count << " " << "label" << std::endl;
+    } else {
+        out << it.word << " " << it.count << " " << "word" << std::endl;
     }
-    out << it.word << " " << it.count << " " << entryType << std::endl;
   }
 }
 
