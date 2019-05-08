@@ -11,7 +11,6 @@
 
 #include <cmath>
 #include <iostream>
-#include <fstream>
 
 namespace fasttext {
 
@@ -70,17 +69,15 @@ void Loss::predict(
     Model::State& state) const {
   computeOutput(state);
   findKBest(k, threshold, heap, state.output);
-  std::ofstream of("/home/tshev/log.txt");
-  of << "Loss::predict\n";
   std::sort_heap(heap.begin(), heap.end(), comparePairs);
 }
 
-void Loss::predict(Predictions& heap, Model::State& state) const {
+void Loss::predict(Predictions& predictions, Model::State& state) const {
   computeOutput(state);
   const Vector& output = state.output;
-  heap.reserve(output.size());
+  predictions.reserve(output.size());
   for (int32_t i = 0; i < output.size(); i++) {
-    heap.emplace_back(std_log(output[i]), i);
+    predictions.emplace_back(std_log(output[i]), i);
   }
 }
 
@@ -278,16 +275,12 @@ void HierarchicalSoftmaxLoss::predict(
     real threshold,
     Predictions& heap,
     Model::State& state) const {
-  std::ofstream of("/home/tshev/log.txt");
-  of << "HierarchicalSoftmaxLoss::predict\n";
   dfs(k, threshold, 2 * osz_ - 2, 0.0, heap, state.hidden);
   std::sort_heap(heap.begin(), heap.end(), comparePairs);
 }
 
-void HierarchicalSoftmaxLoss::predict(Predictions& heap, Model::State& state) const {
-  std::ofstream of("/home/tshev/log.txt");
-  of << "HierarchicalSoftmaxLoss::predictAll\n";
-  dfs(2 * osz_ - 2, 0.0, heap, state.hidden);
+void HierarchicalSoftmaxLoss::predict(Predictions& predictions, Model::State& state) const {
+  dfs(2 * osz_ - 2, 0.0, predictions, state.hidden);
 }
 
 
@@ -326,19 +319,19 @@ void HierarchicalSoftmaxLoss::dfs(
 void HierarchicalSoftmaxLoss::dfs(
     int32_t node,
     real score,
-    Predictions& heap,
+    Predictions& predictions,
     const Vector& hidden) const {
 
   if (tree_[node].left == -1 && tree_[node].right == -1) {
-    heap.emplace_back(score, node);
+    predictions.emplace_back(score, node);
     return;
   }
 
   real f = wo_->dotRow(hidden, node - osz_);
   f = 1. / (1 + std::exp(-f));
 
-  dfs(tree_[node].left, score + std_log(1.0 - f), heap, hidden);
-  dfs(tree_[node].right, score + std_log(f), heap, hidden);
+  dfs(tree_[node].left, score + std_log(1.0 - f), predictions, hidden);
+  dfs(tree_[node].right, score + std_log(f), predictions, hidden);
 }
 
 SoftmaxLoss::SoftmaxLoss(std::shared_ptr<Matrix>& wo) : Loss(wo) {}
