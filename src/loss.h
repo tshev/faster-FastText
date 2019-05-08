@@ -131,7 +131,7 @@ class HierarchicalSoftmaxLoss : public BinaryLogisticLoss {
       Predictions& heap,
       const Vector& hidden) const;
 
-  void dfs(int32_t node, real score, Predictions& heap, const Vector& hidden) const;
+  void dfs(int32_t node, real score, Predictions& predictions, const Vector& hidden) const;
 
  public:
   explicit HierarchicalSoftmaxLoss(
