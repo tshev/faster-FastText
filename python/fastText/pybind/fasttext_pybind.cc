@@ -301,6 +301,27 @@ PYBIND11_MODULE(fasttext_pybind, m) {
             return transformedPredictions;
           })
       .def(
+          "predictAll",
+          // NOTE: text needs to end in a newline
+          // to exactly mimic the behavior of the cli
+          [](fasttext::FastText& m, const std::string& text) {
+            std::stringstream ioss(text);
+            std::vector<std::pair<fasttext::real, std::string>> predictions;
+
+            m.predictLine(ioss, predictions);
+            std::sort(std::begin(predictions), std::end(predictions), [](const auto& x, const auto &y) {
+              return x.second < y.second;
+            });
+
+            std::vector<fasttext::real> transformedPredictions;
+            transformedPredictions.reserve(predictions.size());
+
+            std::transform(std::begin(predictions), std::end(predictions), std::back_inserter(transformedPredictions), [](const auto& x) {
+                return x.first;
+            });
+            return transformedPredictions;
+          })
+      .def(
           "multilinePredict",
           // NOTE: text needs to end in a newline
           // to exactly mimic the behavior of the cli
@@ -329,6 +350,31 @@ PYBIND11_MODULE(fasttext_pybind, m) {
             }
             return allPredictions;
           })
+      .def(
+          "multilinePredictAll",
+          // NOTE: text needs to end in a newline
+          // to exactly mimic the behavior of the cli
+          [](fasttext::FastText& m, const std::vector<std::string>& lines) {
+            std::vector<std::vector<fasttext::real>> allPredictions;
+
+            allPredictions.reserve(lines.size());
+            std::vector<std::pair<fasttext::real, std::string>> predictions;
+            for (const std::string& text : lines) {
+              std::stringstream ioss(text); /// stringstream is slow
+              m.predictLine(ioss, predictions);
+              std::sort(std::begin(predictions), std::end(predictions), [](const auto& x, const auto &y) {
+                return x.second < y.second;
+              });
+              std::vector<fasttext::real> transformedPredictions;
+              transformedPredictions.reserve(predictions.size());
+              std::transform(std::begin(predictions), std::end(predictions), std::back_inserter(transformedPredictions), [](const auto& x) {
+                return x.first;
+              });
+              allPredictions.push_back(std::move(transformedPredictions));
+            }
+            return allPredictions;
+          })
+
       .def(
           "testLabel",
           [](fasttext::FastText& m,

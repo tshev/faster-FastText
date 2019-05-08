@@ -53,6 +53,8 @@ class Loss {
       real /*threshold*/,
       Predictions& /*heap*/,
       Model::State& /*state*/) const;
+
+  virtual void predict(Predictions& predictions, Model::State& state) const;
 };
 
 class BinaryLogisticLoss : public Loss {
@@ -129,6 +131,8 @@ class HierarchicalSoftmaxLoss : public BinaryLogisticLoss {
       Predictions& heap,
       const Vector& hidden) const;
 
+  void dfs(int32_t node, real score, Predictions& predictions, const Vector& hidden) const;
+
  public:
   explicit HierarchicalSoftmaxLoss(
       std::shared_ptr<Matrix>& wo,
@@ -145,6 +149,8 @@ class HierarchicalSoftmaxLoss : public BinaryLogisticLoss {
       real threshold,
       Predictions& heap,
       Model::State& state) const override final;
+
+  void predict(Predictions& predictions, Model::State& state) const override final;
 };
 
 class SoftmaxLoss : public Loss {

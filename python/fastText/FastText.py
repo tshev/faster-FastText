@@ -139,8 +139,25 @@ class _FastText():
             text = check(text)
             predictions = self.f.predict(text, k, threshold, on_unicode_error)
             probs, labels = zip(*predictions)
-
             return labels, np.array(probs, copy=False)
+
+    def predict_all(self, text, on_unicode_error='strict'):
+        def check(entry):
+            if entry.find('\n') != -1:
+                raise ValueError(
+                    "predict processes one line at a time (remove \'\\n\')"
+                )
+            entry += "\n"
+            return entry
+
+        if type(text) is list:
+            text = [check(entry) for entry in text]
+            predictions = self.f.multilinePredictAll(text)
+            return np.array(predictions, dtype=float)
+        else:
+            text = check(text)
+            probs = self.f.predictAll(text)
+            return np.array(probs, copy=False)
 
     def get_input_matrix(self):
         """
