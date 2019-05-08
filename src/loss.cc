@@ -10,7 +10,6 @@
 #include "utils.h"
 
 #include <cmath>
-#include <iostream>
 
 namespace fasttext {
 
