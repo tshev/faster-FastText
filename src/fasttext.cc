@@ -449,6 +449,20 @@ void FastText::predict(
   model_->predict(words, k, threshold, predictions, state);
 }
 
+void FastText::predict(const std::vector<int32_t>& words, Predictions& predictions) const {
+  if (words.empty()) {
+    return;
+  }
+  Model::State state(args_->dim, dict_->nlabels(), 0);
+  predictions.reserve(dict_->nlabels());
+  if (args_->model != model_name::sup) {
+    throw std::invalid_argument("Model needs to be supervised for prediction!");
+  }
+  model_->predict(words, predictions, state);
+}
+
+
+
 bool FastText::predictLine(
     std::istream& in,
     std::vector<std::pair<real, std::string>>& predictions,
@@ -470,6 +484,25 @@ bool FastText::predictLine(
 
   return true;
 }
+
+bool FastText::predictLine(std::istream& in, std::vector<std::pair<real, std::string>>& predictions) const {
+  predictions.clear();
+  if (in.peek() == EOF) {
+    return false;
+  }
+
+  std::vector<int32_t> words, labels;
+  dict_->getLine(in, words, labels);
+  Predictions linePredictions;
+  predict(words, linePredictions);
+  predictions.reserve(linePredictions.size());
+  for (const auto& p : linePredictions) {
+    predictions.emplace_back(std::exp(p.first), dict_->getLabel(p.second));
+  }
+
+  return true;
+}
+
 
 void FastText::getSentenceVector(std::istream& in, fasttext::Vector& svec) {
   // std::istream is slow
