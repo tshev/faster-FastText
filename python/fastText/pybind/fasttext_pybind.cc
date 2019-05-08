@@ -307,10 +307,15 @@ PYBIND11_MODULE(fasttext_pybind, m) {
           [](fasttext::FastText& m, const std::string& text) {
             std::stringstream ioss(text);
             std::vector<std::pair<fasttext::real, std::string>> predictions;
+
             m.predictLine(ioss, predictions);
+            std::sort(std::begin(predictions), std::end(predictions), [](const auto& x, const auto &y) {
+              return x.second < y.second;
+            });
 
             std::vector<fasttext::real> transformedPredictions;
             transformedPredictions.reserve(predictions.size());
+
             std::transform(std::begin(predictions), std::end(predictions), std::back_inserter(transformedPredictions), [](const auto& x) {
                 return x.first;
             });
