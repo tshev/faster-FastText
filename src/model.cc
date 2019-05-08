@@ -67,9 +67,9 @@ void Model::predict(
   loss_->predict(k, threshold, heap, state);
 }
 
-void Model::predict(const std::vector<int32_t>& input, Predictions& heap, State& state) const {
+void Model::predict(const std::vector<int32_t>& input, Predictions& predictions, State& state) const {
   computeHidden(input, state);
-  loss_->predict(heap, state);
+  loss_->predict(predictions, state);
 }
 
 void Model::update(

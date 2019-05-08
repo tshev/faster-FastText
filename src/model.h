@@ -63,7 +63,7 @@ class Model {
       Predictions& heap,
       State& state) const;
 
-  void predict(const std::vector<int32_t>& input, Predictions& heap, State& state) const;
+  void predict(const std::vector<int32_t>& input, Predictions& predictions, State& state) const;
 
   void update(
       const std::vector<int32_t>& input,
