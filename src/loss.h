@@ -54,7 +54,7 @@ class Loss {
       Predictions& /*heap*/,
       Model::State& /*state*/) const;
 
-  virtual void predict(Predictions& /*heap*/, Model::State& /*state*/) const;
+  virtual void predict(Predictions& predictions, Model::State& state) const;
 };
 
 class BinaryLogisticLoss : public Loss {
@@ -150,7 +150,7 @@ class HierarchicalSoftmaxLoss : public BinaryLogisticLoss {
       Predictions& heap,
       Model::State& state) const override final;
 
-  void predict(Predictions& heap, Model::State& state) const override final;
+  void predict(Predictions& predictions, Model::State& state) const override final;
 };
 
 class SoftmaxLoss : public Loss {
