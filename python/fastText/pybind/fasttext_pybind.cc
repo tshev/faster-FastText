@@ -15,6 +15,7 @@
 #include <vector.h>
 #include <cmath>
 #include <iterator>
+#include <numeric>
 #include <sstream>
 #include <stdexcept>
 
@@ -313,12 +314,22 @@ PYBIND11_MODULE(fasttext_pybind, m) {
               return x.second < y.second;
             });
 
+            fasttext::real sum = std::accumulate(std::begin(predictions), std::end(predictions), fasttext::real{0.0}, [](fasttext::real r, const auto& x) {
+                return r + x.first;
+            });
+
             std::vector<fasttext::real> transformedPredictions;
             transformedPredictions.reserve(predictions.size());
 
-            std::transform(std::begin(predictions), std::end(predictions), std::back_inserter(transformedPredictions), [](const auto& x) {
-                return x.first;
-            });
+            if (sum == fasttext::real(0.0)) {
+                std::transform(std::begin(predictions), std::end(predictions), std::back_inserter(transformedPredictions), [](const auto& x) {
+                    return x.first;
+                });
+            } else {
+                std::transform(std::begin(predictions), std::end(predictions), std::back_inserter(transformedPredictions), [sum](const auto& x) {
+                    return x.first / sum;
+                });
+            }
             return transformedPredictions;
           })
       .def(
