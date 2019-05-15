@@ -373,19 +373,31 @@ PYBIND11_MODULE(fasttext_pybind, m) {
             for (const std::string& text : lines) {
               std::stringstream ioss(text); /// stringstream is slow
               m.predictLine(ioss, predictions);
+
               std::sort(std::begin(predictions), std::end(predictions), [](const auto& x, const auto &y) {
                 return x.second < y.second;
               });
+
+              fasttext::real sum = std::accumulate(std::begin(predictions), std::end(predictions), fasttext::real{0.0}, [](fasttext::real r, const auto& x) {
+                  return r + x.first;
+              });
+
               std::vector<fasttext::real> transformedPredictions;
               transformedPredictions.reserve(predictions.size());
-              std::transform(std::begin(predictions), std::end(predictions), std::back_inserter(transformedPredictions), [](const auto& x) {
-                return x.first;
-              });
+              if (sum == fasttext::real(0.0)) {
+                  std::transform(std::begin(predictions), std::end(predictions), std::back_inserter(transformedPredictions), [](const auto& x) {
+                      return x.first;
+                  });
+              } else {
+                  std::transform(std::begin(predictions), std::end(predictions), std::back_inserter(transformedPredictions), [sum](const auto& x) {
+                      return x.first / sum;
+                  });
+              }
+
               allPredictions.push_back(std::move(transformedPredictions));
             }
             return allPredictions;
           })
-
       .def(
           "testLabel",
           [](fasttext::FastText& m,
