@@ -5,3 +5,7 @@
 data
 fasttext
 result
+build/
+python/fasttext.egg-info/
+python/fasttext_pybind.cpython-37m-x86_64-linux-gnu.so
+

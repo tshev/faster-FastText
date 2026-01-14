@@ -62,6 +62,9 @@ class Model {
       real threshold,
       Predictions& heap,
       State& state) const;
+
+  void predict(const std::vector<int32_t>& input, Predictions& predictions, State& state) const;
+
   void update(
       const std::vector<int32_t>& input,
       const std::vector<int32_t>& targets,

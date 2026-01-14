@@ -7,11 +7,12 @@
 #
 
 CXX = c++
-CXXFLAGS = -pthread -std=c++0x -march=native
+CXXFLAGS = -Wall -pthread -std=c++14 -march=native -ffast-math -Wsuggest-final-methods -Wsuggest-override -Wodr -flto -ftree-loop-linear -floop-strip-mine -floop-block
+
 OBJS = args.o matrix.o dictionary.o loss.o productquantizer.o densematrix.o quantmatrix.o vector.o model.o utils.o meter.o fasttext.o
 INCLUDES = -I.
 
-opt: CXXFLAGS += -O3 -funroll-loops
+opt: CXXFLAGS += -O3 -funroll-loops -DNDEBUG
 opt: fasttext
 
 coverage: CXXFLAGS += -O0 -fno-inline -fprofile-arcs --coverage

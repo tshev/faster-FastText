@@ -32,7 +32,7 @@ class DenseMatrix : public Matrix {
   DenseMatrix(DenseMatrix&&) noexcept;
   DenseMatrix& operator=(const DenseMatrix&) = delete;
   DenseMatrix& operator=(DenseMatrix&&) = delete;
-  virtual ~DenseMatrix() noexcept override = default;
+  virtual ~DenseMatrix() noexcept final override = default;
 
   inline real* data() {
     return data_.data();
@@ -64,12 +64,12 @@ class DenseMatrix : public Matrix {
   real l2NormRow(int64_t i) const;
   void l2NormRow(Vector& norms) const;
 
-  real dotRow(const Vector&, int64_t) const override;
-  void addVectorToRow(const Vector&, int64_t, real) override;
+  real dotRow(const Vector&, int64_t) const override final;
+  void addVectorToRow(const Vector&, int64_t, real) override final;
   void addRowToVector(Vector& x, int32_t i) const override;
-  void addRowToVector(Vector& x, int32_t i, real a) const override;
-  void save(std::ostream&) const override;
-  void load(std::istream&) override;
-  void dump(std::ostream&) const override;
+  void addRowToVector(Vector& x, int32_t i, real a) const override final;
+  void save(std::ostream&) const override final;
+  void load(std::istream&) override final;
+  void dump(std::ostream&) const override final;
 };
 } // namespace fasttext

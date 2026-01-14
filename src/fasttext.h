@@ -122,11 +122,15 @@ class FastText {
       Predictions& predictions,
       real threshold = 0.0) const;
 
+  void predict(const std::vector<int32_t>& words, Predictions& predictions) const;
+
   bool predictLine(
       std::istream& in,
       std::vector<std::pair<real, std::string>>& predictions,
       int32_t k,
       real threshold) const;
+
+  bool predictLine(std::istream& in, std::vector<std::pair<real, std::string>>& predictions) const;
 
   std::vector<std::pair<std::string, Vector>> getNgramVectors(
       const std::string& word) const;
@@ -187,5 +191,12 @@ class FastText {
       int32_t k,
       const std::set<std::string>& banSet,
       std::vector<std::pair<real, std::string>>& results);
+};
+
+template<typename T>
+struct greater_first {
+    bool operator()(const T& x, const T& y) {
+        return y.first < x.first;
+    }
 };
 } // namespace fasttext

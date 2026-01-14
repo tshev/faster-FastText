@@ -43,7 +43,7 @@ class QuantMatrix : public Matrix {
   QuantMatrix(QuantMatrix&&) = delete;
   QuantMatrix& operator=(const QuantMatrix&) = delete;
   QuantMatrix& operator=(QuantMatrix&&) = delete;
-  virtual ~QuantMatrix() noexcept override = default;
+  virtual ~QuantMatrix() noexcept override final = default;
 
   void quantizeNorm(const Vector&);
   void quantize(DenseMatrix&& mat);

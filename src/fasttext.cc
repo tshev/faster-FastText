@@ -89,9 +89,10 @@ int32_t FastText::getSubwordId(const std::string& subword) const {
 void FastText::getWordVector(Vector& vec, const std::string& word) const {
   const std::vector<int32_t>& ngrams = dict_->getSubwords(word);
   vec.zero();
-  for (int i = 0; i < ngrams.size(); i++) {
-    addInputVector(vec, ngrams[i]);
+  for (int32_t ngram : ngrams) {
+    addInputVector(vec, ngram);
   }
+
   if (ngrams.size() > 0) {
     vec.mul(1.0 / ngrams.size());
   }
@@ -121,7 +122,6 @@ void FastText::saveVectors(const std::string& filename) {
     getWordVector(vec, word);
     ofs << word << " " << vec << std::endl;
   }
-  ofs.close();
 }
 
 void FastText::saveVectors() {
@@ -449,6 +449,20 @@ void FastText::predict(
   model_->predict(words, k, threshold, predictions, state);
 }
 
+void FastText::predict(const std::vector<int32_t>& words, Predictions& predictions) const {
+  if (words.empty()) {
+    return;
+  }
+  Model::State state(args_->dim, dict_->nlabels(), 0);
+  predictions.reserve(dict_->nlabels());
+  if (args_->model != model_name::sup) {
+    throw std::invalid_argument("Model needs to be supervised for prediction!");
+  }
+  model_->predict(words, predictions, state);
+}
+
+
+
 bool FastText::predictLine(
     std::istream& in,
     std::vector<std::pair<real, std::string>>& predictions,
@@ -463,15 +477,35 @@ bool FastText::predictLine(
   dict_->getLine(in, words, labels);
   Predictions linePredictions;
   predict(k, words, linePredictions, threshold);
+  predictions.reserve(linePredictions.size());
   for (const auto& p : linePredictions) {
-    predictions.push_back(
-        std::make_pair(std::exp(p.first), dict_->getLabel(p.second)));
+    predictions.emplace_back(std::exp(p.first), dict_->getLabel(p.second));
   }
 
   return true;
 }
 
+bool FastText::predictLine(std::istream& in, std::vector<std::pair<real, std::string>>& predictions) const {
+  predictions.clear();
+  if (in.peek() == EOF) {
+    return false;
+  }
+
+  std::vector<int32_t> words, labels;
+  dict_->getLine(in, words, labels);
+  Predictions linePredictions;
+  predict(words, linePredictions);
+  predictions.reserve(linePredictions.size());
+  for (const auto& p : linePredictions) {
+    predictions.emplace_back(std::exp(p.first), dict_->getLabel(p.second));
+  }
+
+  return true;
+}
+
+
 void FastText::getSentenceVector(std::istream& in, fasttext::Vector& svec) {
+  // std::istream is slow
   svec.zero();
   if (args_->model == model_name::sup) {
     std::vector<int32_t> line, labels;
@@ -511,12 +545,13 @@ std::vector<std::pair<std::string, Vector>> FastText::getNgramVectors(
   std::vector<std::string> substrings;
   dict_->getSubwords(word, ngrams, substrings);
   assert(ngrams.size() <= substrings.size());
+  result.reserve(ngrams.size());
   for (int32_t i = 0; i < ngrams.size(); i++) {
     Vector vec(args_->dim);
     if (ngrams[i] >= 0) {
       vec.addRow(*input_, ngrams[i]);
     }
-    result.push_back(std::make_pair(substrings[i], std::move(vec)));
+    result.emplace_back(substrings[i], std::move(vec));
   }
   return result;
 }
@@ -570,30 +605,44 @@ std::vector<std::pair<real, std::string>> FastText::getNN(
     int32_t k,
     const std::set<std::string>& banSet) {
   std::vector<std::pair<real, std::string>> heap;
+  heap.reserve(size_t(k + 1));
 
   real queryNorm = query.norm();
   if (std::abs(queryNorm) < 1e-8) {
     queryNorm = 1;
   }
 
-  for (int32_t i = 0; i < dict_->nwords(); i++) {
+  int32_t i = 0;
+  while (i < dict_->nwords() && heap.size() < k) {
+    std::string word = dict_->getWord(i);
+    if (banSet.find(word) == banSet.end()) {
+      real dp = wordVectors.dotRow(query, i);
+      real similarity = dp / queryNorm;
+      heap.emplace_back(similarity, std::move(word));
+    }
+    ++i;
+  }
+
+  greater_first<typename decltype(heap)::value_type> cmp;
+  std::make_heap(std::begin(heap), std::end(heap), cmp);
+
+  while (i < dict_->nwords()) {
     std::string word = dict_->getWord(i);
     if (banSet.find(word) == banSet.end()) {
       real dp = wordVectors.dotRow(query, i);
       real similarity = dp / queryNorm;
 
-      if (heap.size() == k && similarity < heap.front().first) {
-        continue;
-      }
-      heap.push_back(std::make_pair(similarity, word));
-      std::push_heap(heap.begin(), heap.end(), comparePairs);
-      if (heap.size() > k) {
-        std::pop_heap(heap.begin(), heap.end(), comparePairs);
-        heap.pop_back();
+      if (similarity >= heap.front().first) {
+          heap.emplace_back(similarity, std::move(word));
+          std::push_heap(heap.begin(), heap.end(), cmp);
+          std::pop_heap(heap.begin(), heap.end(), cmp);
+          heap.pop_back();
       }
     }
+    ++i;
   }
-  std::sort_heap(heap.begin(), heap.end(), comparePairs);
+
+  std::sort(heap.begin(), heap.end(), cmp); // faster than std::sort_heap
 
   return heap;
 }
@@ -686,7 +735,6 @@ std::shared_ptr<Matrix> FastText::getInputMatrixFromFile(
     const std::string& filename) const {
   std::ifstream in(filename);
   std::vector<std::string> words;
-  std::shared_ptr<DenseMatrix> mat; // temp. matrix for pretrained vectors
   int64_t n, dim;
   if (!in.is_open()) {
     throw std::invalid_argument(filename + " cannot be opened for loading!");
@@ -697,23 +745,22 @@ std::shared_ptr<Matrix> FastText::getInputMatrixFromFile(
         "Dimension of pretrained vectors (" + std::to_string(dim) +
         ") does not match dimension (" + std::to_string(args_->dim) + ")!");
   }
-  mat = std::make_shared<DenseMatrix>(n, dim);
+  DenseMatrix mat(n, dim); // temp. matrix for pretrained vectors
   for (size_t i = 0; i < n; i++) {
     std::string word;
     in >> word;
     words.push_back(word);
     dict_->add(word);
     for (size_t j = 0; j < dim; j++) {
-      in >> mat->at(i, j);
+      in >> mat.at(i, j);
     }
   }
   in.close();
 
   dict_->threshold(1, 0);
   dict_->init();
-  std::shared_ptr<DenseMatrix> input = std::make_shared<DenseMatrix>(
-      dict_->nwords() + args_->bucket, args_->dim);
-  input->uniform(1.0 / args_->dim);
+  DenseMatrix input(dict_->nwords() + args_->bucket, args_->dim);
+  input.uniform(1.0 / args_->dim);
 
   for (size_t i = 0; i < n; i++) {
     int32_t idx = dict_->getId(words[i]);
@@ -721,10 +768,10 @@ std::shared_ptr<Matrix> FastText::getInputMatrixFromFile(
       continue;
     }
     for (size_t j = 0; j < dim; j++) {
-      input->at(idx, j) = mat->at(i, j);
+      input.at(idx, j) = mat.at(i, j);
     }
   }
-  return input;
+  return std::make_shared<DenseMatrix>(std::move(input));
 }
 
 void FastText::loadVectors(const std::string& filename) {
@@ -781,13 +828,14 @@ void FastText::startThreads() {
   tokenCount_ = 0;
   loss_ = -1;
   std::vector<std::thread> threads;
+  threads.reserve(args_->thread);
   for (int32_t i = 0; i < args_->thread; i++) {
     threads.push_back(std::thread([=]() { trainThread(i); }));
   }
   const int64_t ntokens = dict_->ntokens();
   // Same condition as trainThread
   while (tokenCount_ < args_->epoch * ntokens) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
     if (loss_ >= 0 && args_->verbose > 1) {
       real progress = real(tokenCount_) / (args_->epoch * ntokens);
       std::cerr << "\r";
@@ -812,9 +860,8 @@ bool FastText::isQuant() const {
   return quant_;
 }
 
-bool comparePairs(
-    const std::pair<real, std::string>& l,
-    const std::pair<real, std::string>& r) {
+bool comparePairs(const std::pair<real, std::string> &l,
+                  const std::pair<real, std::string> &r) {
   return l.first > r.first;
 }
 
