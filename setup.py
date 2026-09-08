@@ -60,9 +60,9 @@ fasttext_src_cc = list(
     map(lambda x: str(os.path.join(FASTTEXT_SRC, x)), fasttext_src_cc)
 )
 
-extra_compile_args = " -march=native -ffast-math -Wsuggest-final-methods" \
+extra_compile_args = " -ffast-math -Wsuggest-final-methods" \
                      " -Wsuggest-override -Wodr -flto -ftree-loop-linear" \
-                     " -floop-strip-mine -floop-block "
+                     " -floop-strip-mine -floop-block %s" % os.environ.get("CFLAGS", "")
 
 ext_modules = [
     Extension(
